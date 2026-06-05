@@ -1,1 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AO3 Tag Dice 🎲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .preset-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .preset-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            color: white;
+        }
+
+        .result-card.empty {
+            background: #f5f5f5;
+            color: #999;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+        }
+
+        .tag-item {
+            background: rgba(255,255,255,0.2);
+            padding: 12px 18px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tag-dimension {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tag-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 AO3 Tag Dice</h1>
+
+        <div class="preset-selector">
+            <button class="preset-btn active" data-preset="basic">Basic</button>
+            <button class="preset-btn" data-preset="full">Full</button>
+            <button class="preset-btn" data-preset="extreme">Extreme</button>
+            <button class="preset-btn" data-preset="scenario">Scenario</button>
+        </div>
+
+        <div class="result-card empty" id="resultCard">
+            点击 Roll 开始 🎲
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="rollBtn">🎲 Roll</button>
+            <button class="btn btn-secondary" id="copyBtn">📋 Copy</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">已复制到剪贴板！</div>
+
+    <script>
+        // Embedded tag data
+        const tagsData = {
+            "dimensions": {
+                "entry": {
+                    "name": "入口/位置",
+                    "tags": ["oral", "vaginal", "anal", "urethral", "nipple play", "thigh fucking"]
+                },
+                "action": {
+                    "name": "动作",
+                    "tags": ["edging", "overstimulation", "fisting", "cock warming", "denial", "forced orgasm", "multiple orgasms", "squirting"]
+                },
+                "condition": {
+                    "name": "限制条件",
+                    "tags": ["blindfold", "bondage", "temperature play", "breathplay", "semi-public", "sensory deprivation", "restraints", "gag"]
+                },
+                "mood": {
+                    "name": "情绪/氛围",
+                    "tags": ["degradation", "praise", "CNC", "fear play", "begging", "humiliation", "worship", "tenderness"]
+                },
+                "scene": {
+                    "name": "场景",
+                    "tags": ["bedroom", "kitchen", "bathroom", "office", "car", "outdoor", "elevator", "closet"]
+                },
+                "intensity": {
+                    "name": "强度",
+                    "tags": ["gentle", "moderate", "rough", "brutal", "playful", "desperate"]
+                },
+                "dynamic": {
+                    "name": "关系张力",
+                    "tags": ["dom/sub", "bratty/taming", "caring/needy", "possessive/owned", "playful/teasing", "punishing/pleading"]
+                }
+            },
+            "presets": {
+                "basic": ["entry", "action", "mood"],
+                "full": ["entry", "action", "condition", "mood"],
+                "extreme": ["entry", "action", "condition", "mood", "intensity", "dynamic"],
+                "scenario": ["scene", "mood", "dynamic", "intensity"]
+            }
+        };
+
+        let currentPreset = 'basic';
+        let currentResult = null;
+
+        // Pick random tag from dimension
+        function pickRandom(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        // Roll the dice
+        function roll() {
+            if (!tagsData.dimensions) return;
+
+            const dimensionsToUse = tagsData.presets[currentPreset];
+            const result = [];
+
+            dimensionsToUse.forEach(dimKey => {
+                const dimension = tagsData.dimensions[dimKey];
+                if (dimension) {
+                    const tag = pickRandom(dimension.tags);
+                    result.push({
+                        dimension: dimension.name,
+                        tag: tag
+                    });
+                }
+            });
+
+            currentResult = result;
+            displayResult(result);
+        }
+
+        // Display result
+        function displayResult(result) {
+            const card = document.getElementById('resultCard');
+            card.classList.remove('empty');
+
+            card.innerHTML = result.map(item => `
+                <div class="tag-item">
+                    <div class="tag-dimension">${item.dimension}</div>
+                    <div class="tag-value">${item.tag}</div>
+                </div>
+            `).join('');
+        }
+
+        // Copy result to clipboard
+        function copyResult() {
+            if (!currentResult || currentResult.length === 0) return;
+
+            const text = currentResult.map(item =>
+                `${item.dimension}: ${item.tag}`
+            ).join('\n');
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板！');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Preset button click handlers
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.preset-btn').forEach(b =>
+                    b.classList.remove('active')
+                );
+                btn.classList.add('active');
+                currentPreset = btn.dataset.preset;
+            });
+        });
+
+        // Roll button
+        document.getElementById('rollBtn').addEventListener('click', roll);
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', copyResult);
+    </script>
+</body>
+</html>
